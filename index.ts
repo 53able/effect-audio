@@ -3,6 +3,8 @@ import { program } from 'commander';
 import fs from 'fs';
 import path from 'path';
 import { pascalCase } from "change-case";
+import { Minimatch } from'minimatch';
+
 
 /**
  * 指定したディレクトリ内の特定ファイルを再帰的に結合する
@@ -14,12 +16,13 @@ const concatFiles = async ({
   type,
 }: {
   dir: string;
-  type: string;
+  type?: string;
 }) => {
   // ...
   // 絶対パスに変換
   const absolutePath = fs.realpathSync(dir);
 
+  // ディレクトリ以下のファイルを再帰的に取得
   const listFiles = async (dir: string): Promise<string[]> => {
     const dirents = await fs.promises.readdir(dir, { withFileTypes: true });
     const files = await Promise.all(
@@ -33,15 +36,33 @@ const concatFiles = async ({
 
   // ディレクトリ以下のファイルを全階層取得
   const files = await listFiles(absolutePath);
-  // 拡張子が一致するファイルのみを抽出
-  const targetFiles = files.filter((file) => file.endsWith(type));
 
+  // .gitignoreファイルを読み込み、無視するファイルを除外
+  const gitignore = await fs.promises
+    .readFile(path.join(absolutePath, '.gitignore'), 'utf-8');
+  const ignoreFilesRegExps = gitignore.split('\n')
+    .filter((line) => line.trim() !== '')
+    .filter((line) => !line.startsWith('#'))
+    .map(glob => {
+      const regexp = new Minimatch(glob).makeRe();
+      if (!regexp) throw new Error(`globに変換できません。glob: "${glob}"`);
+      return regexp
+    });
+
+  // 無視するファイルを除外
+  const filteredFiles = files.filter((file) => !ignoreFilesRegExps.some((regexp) => {
+      const _file = path.relative(absolutePath, file).split("/");
+      return _file.some((f) => regexp.test(f));
+  }));
+
+    // 拡張子が一致するファイルのみを抽出
+  const targetFiles = type ?  filteredFiles.filter((file) => file.endsWith(type)) : filteredFiles;
+
+  // ファイルが見つからない場合はエラーを表示
   if (targetFiles.length === 0) {
     console.error('No files found.');
     return;
   }
-
-  // console.log('Files found:', JSON.stringify(targetFiles, null, 2));
 
   // 3ms毎に見つかったファイル名をひとつずつ表示
   for (const file of targetFiles) {
@@ -79,6 +100,6 @@ program
   .action(concatFiles)
   .description('Concatenate files in a directory')
   .requiredOption('-d, --dir <dir>', 'a directory')
-  .requiredOption('-t, --type <type>', 'a file type')
+  .option('-t, --type <type>', 'a file type', undefined)
 
 program.parse();
