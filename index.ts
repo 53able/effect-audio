@@ -84,7 +84,7 @@ ${content}
   ).then((contents) => contents.join('\n'));
 
   // 出力ファイル名を生成
-  const fileName = `${pascalCase(dir).replace(/[^a-zA-Z0-9]/g, '')}.${type}.${Date.now()}.md`;
+  const fileName = `${pascalCase(dir).replace(/[^a-zA-Z0-9]/g, '')}${type ? `.${type}` : ''}.${Date.now()}.md`;
   fs.mkdirSync('./output', { recursive: true });
   console.log("\n", '👉 Output:', fileName);
     // contentsの行数を表示, 3桁ごとにカンマ区切り
