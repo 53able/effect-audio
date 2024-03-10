@@ -4,6 +4,15 @@ import fs from 'fs';
 import path from 'path';
 import { pascalCase } from "change-case";
 import { Minimatch } from'minimatch';
+import {
+  encode,
+  encodeChat,
+  decode,
+  isWithinTokenLimit,
+  encodeGenerator,
+  decodeGenerator,
+  decodeAsyncGenerator,
+} from 'gpt-tokenizer'
 
 
 /**
@@ -53,7 +62,9 @@ const concatFiles = async ({
   const filteredFiles = files.filter((file) => !ignoreFilesRegExps.some((regexp) => {
       const _file = path.relative(absolutePath, file).split("/");
       return _file.some((f) => regexp.test(f));
-  }));
+  }))
+  // 画像を除外
+  .filter((file) => !/\.(png|jpe?g|gif|svg|webp|ico|bmp|tiff|psd|raw|heif|indd|ai|eps|pdf|xcf|sketch|fig|xd|jpg|jpeg|gif|svg|webp|ico|bmp|tiff|psd|raw|heif|indd|ai|eps|pdf|xcf|sketch|fig|xd)$/i.test(file));
 
     // 拡張子が一致するファイルのみを抽出
   const targetFiles = type ?  filteredFiles.filter((file) => file.endsWith(type)) : filteredFiles;
@@ -92,7 +103,22 @@ ${content}
   // ファイル容量を表示, 3桁ごとにカンマ区切り
   const size = Buffer.byteLength(contents, 'utf-8')/1000;
   console.log('File size:', size.toLocaleString(), 'KB');
+  // トークン数を表示, 3桁ごとにカンマ区切り
+  const tokens = encode(contents).length;
+  console.log('Tokens:', tokens.toLocaleString());
+
   const output = `./output/${fileName}`;
+
+  // 200,000トークンを超える場合はエラーを表示
+  if (tokens > 200000) {
+    console.error('🚨 200,000 tokens exceeded.');
+    const chunks = contents.match(/[\s\S]{1,200000}/g);
+    if (!chunks) throw new Error('chunksが見つかりません。');
+    for (let i = 0; i < chunks.length; i++) {
+      await fs.promises.writeFile(output.replace('.md', `-${i + 1}.md`), chunks[i]);
+    }
+    return;
+  }
   await fs.promises.writeFile(output, contents);
 }
 
