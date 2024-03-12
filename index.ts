@@ -1,4 +1,3 @@
-// const { program } = require('commander');
 import { program } from 'commander';
 import fs from 'fs';
 import path from 'path';
@@ -6,12 +5,6 @@ import { pascalCase } from "change-case";
 import { Minimatch } from'minimatch';
 import {
   encode,
-  encodeChat,
-  decode,
-  isWithinTokenLimit,
-  encodeGenerator,
-  decodeGenerator,
-  decodeAsyncGenerator,
 } from 'gpt-tokenizer'
 
 
@@ -46,25 +39,30 @@ const concatFiles = async ({
   // ディレクトリ以下のファイルを全階層取得
   const files = await listFiles(absolutePath);
 
-  // .gitignoreファイルを読み込み、無視するファイルを除外
-  const gitignore = await fs.promises
-    .readFile(path.join(absolutePath, '.gitignore'), 'utf-8');
-  const ignoreFilesRegExps = gitignore.split('\n')
-    .filter((line) => line.trim() !== '')
-    .filter((line) => !line.startsWith('#'))
-    .map(glob => {
-      const regexp = new Minimatch(glob).makeRe();
-      if (!regexp) throw new Error(`globに変換できません。glob: "${glob}"`);
-      return regexp
-    });
+  let ignoreFilesRegExps: RegExp[] = [];
+  try {
+    // .gitignoreファイルを読み込み、無視するファイルを除外
+    const gitignore = await fs.promises
+      .readFile(path.join(absolutePath, '.gitignore'), 'utf-8');
+    ignoreFilesRegExps = gitignore.split('\n')
+      .filter((line) => line.trim() !== '')
+      .filter((line) => !line.startsWith('#'))
+      .map(glob => {
+          const regexp = new Minimatch(glob).makeRe();
+          if (!regexp) throw new Error(`globに変換できません。glob: "${glob}"`);
+          return regexp
+        });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
 
   // 無視するファイルを除外
-  const filteredFiles = files.filter((file) => !ignoreFilesRegExps.some((regexp) => {
-      const _file = path.relative(absolutePath, file).split("/");
-      return _file.some((f) => regexp.test(f));
+  const filteredFiles = files.filter((file) => !ignoreFilesRegExps.some((regexp: RegExp) => {
+    const _file = path.relative(absolutePath, file).split("/");
+    return _file.some((f) => regexp.test(f));
   }))
   // 画像を除外
-  .filter((file) => !/\.(png|jpe?g|gif|svg|webp|ico|bmp|tiff|psd|raw|heif|indd|ai|eps|pdf|xcf|sketch|fig|xd|jpg|jpeg|gif|svg|webp|ico|bmp|tiff|psd|raw|heif|indd|ai|eps|pdf|xcf|sketch|fig|xd)$/i.test(file));
+  .filter((file) => !/\.(png|jpe?g|gif|svg|webp|ico|bmp|tiff|psd|raw|heif|indd|ai|eps|pdf|xcf|sketch|fig|xd)$/i.test(file));
 
     // 拡張子が一致するファイルのみを抽出
   const targetFiles = type ?  filteredFiles.filter((file) => file.endsWith(type)) : filteredFiles;
