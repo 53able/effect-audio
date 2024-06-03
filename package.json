@@ -2,6 +2,9 @@
   "name": "tools",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "exec": "bun src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
