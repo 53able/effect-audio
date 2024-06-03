@@ -1,4 +1,3 @@
-import { program } from 'commander';
 import fs from 'fs';
 import path from 'path';
 import { pascalCase } from "change-case";
@@ -7,13 +6,12 @@ import {
   encode,
 } from 'gpt-tokenizer'
 
-
 /**
  * 指定したディレクトリ内の特定ファイルを再帰的に結合する
  * @param dir ディレクトリ
  * @param type ファイルの拡張子
  */
-const concatFiles = async ({
+export const concatFiles = async ({
   dir,
   type,
 }: {
@@ -119,11 +117,3 @@ ${content}
   }
   await fs.promises.writeFile(output, contents);
 }
-
-program
-  .action(concatFiles)
-  .description('Concatenate files in a directory')
-  .requiredOption('-d, --dir <dir>', 'a directory')
-  .option('-t, --type <type>', 'a file type', undefined)
-
-program.parse();
