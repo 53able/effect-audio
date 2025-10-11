@@ -1,5 +1,13 @@
 # EffectAudio
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/effect-audio.svg)](https://www.npmjs.com/package/effect-audio)
+[![npm downloads](https://img.shields.io/npm/dm/effect-audio.svg)](https://www.npmjs.com/package/effect-audio)
+[![Node.js](https://img.shields.io/badge/Node.js-18.0.0+-green.svg)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-8.0.0+-blue.svg)](https://pnpm.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Effect](https://img.shields.io/badge/Effect-3.0+-purple.svg)](https://effect.website/)
+
 M4A to MP3 converter built with Effect and TypeScript.
 
 ## 機能
@@ -12,7 +20,24 @@ M4A to MP3 converter built with Effect and TypeScript.
 
 ## インストール
 
+### npmからインストール（推奨）
+
 ```bash
+# グローバルインストール
+npm install -g effect-audio
+
+# または
+pnpm add -g effect-audio
+```
+
+### 開発用インストール
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/53able/effect-audio.git
+cd effect-audio
+
+# 依存関係をインストール
 pnpm install
 ```
 
@@ -71,6 +96,23 @@ effect-audio /path/to/music --recursive --jobs 20 --output-dir /path/to/converte
 - `pnpm run lint`: リンターを実行
 - `pnpm run format`: フォーマッターを実行
 - `pnpm run check`: リンターとフォーマッターを実行
+- `pnpm run publish:npm`: npmにパッケージを公開
+
+### リリース
+
+このプロジェクトはGitHub Actionsを使用して自動的にnpmに公開されます：
+
+1. バージョンを更新：
+   ```bash
+   pnpm version patch  # または minor, major
+   ```
+
+2. 変更をプッシュ：
+   ```bash
+   git push origin main --tags
+   ```
+
+3. GitHubでReleaseを作成すると、自動的にnpmに公開されます
 
 ### 技術スタック
 
