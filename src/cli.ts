@@ -6,7 +6,12 @@ import { Effect } from 'effect';
 import { convertM4aToMp3 } from './converter.js';
 import { type CliArgs, CliArgsSchema } from './schemas.js';
 
-// 再帰的にディレクトリからm4aファイルを取得する関数
+/**
+ * 指定されたディレクトリからm4aファイルを再帰的に検索する
+ * @param dirPath - 検索対象のディレクトリパス
+ * @param recursive - 再帰的にサブディレクトリを検索するかどうか
+ * @returns 見つかったm4aファイルのパス配列を含むEffect
+ */
 const findM4aFiles = (dirPath: string, recursive = false): Effect.Effect<string[], Error, never> =>
   Effect.gen(function* () {
     const files = yield* Effect.tryPromise({
@@ -39,7 +44,11 @@ const findM4aFiles = (dirPath: string, recursive = false): Effect.Effect<string[
     return m4aFiles;
   });
 
-// 出力ディレクトリの作成と検証
+/**
+ * 出力ディレクトリが存在しない場合は作成する
+ * @param outputDir - 作成するディレクトリのパス
+ * @returns ディレクトリ作成処理を含むEffect
+ */
 const ensureOutputDir = (outputDir: string): Effect.Effect<void, Error, never> =>
   Effect.gen(function* () {
     yield* Effect.tryPromise({
@@ -48,6 +57,205 @@ const ensureOutputDir = (outputDir: string): Effect.Effect<void, Error, never> =
     });
   });
 
+/**
+ * CLI引数を検証し、パースする
+ * @param input - 入力ファイルまたはディレクトリのパス
+ * @param options - CLIオプション
+ * @returns 検証済みのCLI引数を含むEffect
+ */
+const validateAndParseArgs = (
+  input: string,
+  options: {
+    output?: string;
+    quality?: number;
+    bitrate?: number;
+    'sample-rate'?: number;
+    channels?: number;
+    recursive?: boolean;
+    'output-dir'?: string;
+    jobs?: number;
+  }
+): Effect.Effect<CliArgs, Error, never> =>
+  Effect.gen(function* () {
+    const cliArgs: CliArgs = {
+      input,
+      output: options.output,
+      quality: options.quality,
+      bitrate: options.bitrate,
+      'sample-rate': options['sample-rate'],
+      channels: options.channels,
+      recursive: options.recursive,
+      'output-dir': options['output-dir'],
+      jobs: options.jobs ?? 10,
+    };
+
+    return yield* Effect.try({
+      try: () => CliArgsSchema.parse(cliArgs),
+      catch: (error) => new Error(`引数の検証に失敗しました: ${error}`),
+    });
+  });
+
+/**
+ * 単一ファイルのM4AからMP3への変換処理
+ * @param inputPath - 入力ファイルのパス
+ * @param validatedArgs - 検証済みのCLI引数
+ * @returns 変換処理を含むEffect
+ */
+const processSingleFile = (
+  inputPath: string,
+  validatedArgs: CliArgs
+): Effect.Effect<void, Error, never> =>
+  Effect.gen(function* () {
+    const conversionOptions = {
+      inputFile: inputPath,
+      outputFile: validatedArgs.output,
+      quality: validatedArgs.quality,
+      bitrate: validatedArgs.bitrate,
+      sampleRate: validatedArgs['sample-rate'],
+      channels: validatedArgs.channels,
+    };
+
+    yield* convertM4aToMp3(conversionOptions);
+  });
+
+/**
+ * 進捗表示を管理するオブジェクトを作成する
+ * @param totalFiles - 処理対象の総ファイル数
+ * @returns 進捗更新メソッドを含むオブジェクト
+ */
+const createProgressManager = (totalFiles: number) => {
+  let completedCount = 0;
+
+  const updateProgress = () => {
+    const progress = Math.round((completedCount / totalFiles) * 100);
+    const progressBar =
+      '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
+    process.stdout.write(
+      `\r${chalk.cyan(`📊 全体進捗: ${progressBar} ${progress}% (${completedCount}/${totalFiles})`)}`
+    );
+  };
+
+  const incrementProgress = () => {
+    completedCount++;
+    updateProgress();
+  };
+
+  return { updateProgress, incrementProgress };
+};
+
+/**
+ * ディレクトリ内のM4Aファイルを検索し、並列でMP3に変換する
+ * @param inputPath - 入力ディレクトリのパス
+ * @param validatedArgs - 検証済みのCLI引数
+ * @returns ディレクトリ処理を含むEffect
+ */
+const processDirectory = (
+  inputPath: string,
+  validatedArgs: CliArgs
+): Effect.Effect<void, Error, never> =>
+  Effect.gen(function* () {
+    const m4aFiles = yield* findM4aFiles(inputPath, validatedArgs.recursive || false);
+
+    if (m4aFiles.length === 0) {
+      const searchType = validatedArgs.recursive ? '再帰的に' : '';
+      console.log(chalk.yellow(`⚠️  ${searchType}m4aファイルが見つかりませんでした。`));
+      return;
+    }
+
+    const searchType = validatedArgs.recursive ? '再帰的に' : '';
+    console.log(chalk.green(`✅ ${searchType}${m4aFiles.length}個のm4aファイルが見つかりました。`));
+
+    // 出力ディレクトリの設定と作成
+    const outputDir = validatedArgs['output-dir'] || inputPath;
+    if (validatedArgs['output-dir']) {
+      yield* ensureOutputDir(outputDir);
+      console.log(chalk.blue(`📁 出力ディレクトリ: ${outputDir}`));
+    }
+
+    // 進捗管理の初期化
+    const progressManager = createProgressManager(m4aFiles.length);
+
+    // 出力ディレクトリ構造の事前作成
+    if (validatedArgs['output-dir']) {
+      const subdirs = new Set<string>();
+      for (const inputFilePath of m4aFiles) {
+        const relativePath = path.relative(inputPath, inputFilePath);
+        const relativeDir = path.dirname(relativePath);
+        if (relativeDir !== '.') {
+          subdirs.add(path.join(outputDir, relativeDir));
+        }
+      }
+
+      // 必要なサブディレクトリを作成
+      for (const subdir of subdirs) {
+        yield* ensureOutputDir(subdir);
+      }
+    }
+
+    // 並列処理用の変換タスクを作成
+    const conversionTasks = m4aFiles.map((inputFilePath) => {
+      // 出力ファイルパスの生成
+      let outputFilePath: string;
+      if (validatedArgs['output-dir']) {
+        // 出力ディレクトリが指定されている場合、相対パス構造を保持
+        const relativePath = path.relative(inputPath, inputFilePath);
+        const relativeDir = path.dirname(relativePath);
+        const fileName = `${path.basename(inputFilePath, path.extname(inputFilePath))}.mp3`;
+
+        if (relativeDir === '.') {
+          outputFilePath = path.join(outputDir, fileName);
+        } else {
+          const outputSubDir = path.join(outputDir, relativeDir);
+          outputFilePath = path.join(outputSubDir, fileName);
+        }
+      } else {
+        // 出力ディレクトリが指定されていない場合、元の場所に出力
+        const outputFileName = `${path.basename(inputFilePath, path.extname(inputFilePath))}.mp3`;
+        outputFilePath = path.join(path.dirname(inputFilePath), outputFileName);
+      }
+
+      const conversionOptions = {
+        inputFile: inputFilePath,
+        outputFile: outputFilePath,
+        quality: validatedArgs.quality,
+        bitrate: validatedArgs.bitrate,
+        sampleRate: validatedArgs['sample-rate'],
+        channels: validatedArgs.channels,
+      };
+
+      return Effect.gen(function* () {
+        // 変換開始の簡潔な表示（相対パスで表示）
+        const displayPath = path.relative(process.cwd(), inputFilePath);
+        console.log(chalk.blue(`🔄 開始: ${chalk.bold(displayPath)}`));
+
+        yield* convertM4aToMp3(conversionOptions);
+
+        // 変換完了時の進捗更新
+        console.log(chalk.green(`✅ 完了: ${chalk.bold(displayPath)}`));
+        progressManager.incrementProgress();
+      });
+    });
+
+    // 全ての変換を並列実行
+    const concurrency = validatedArgs.jobs || 10;
+    const processingMode = validatedArgs.recursive ? '再帰的' : '通常';
+    console.log(
+      chalk.cyan(
+        `\n🚀 ${processingMode}並列変換を開始します... ${chalk.bold(`(並列数: ${concurrency})`)}`
+      )
+    );
+    console.log(); // 空行を追加
+
+    yield* Effect.all(conversionTasks, { concurrency });
+
+    // 最終的な完了メッセージ
+    console.log(); // 進捗バーの後に改行
+    console.log(chalk.green.bold('\n🎉 全ての変換が完了しました！'));
+  });
+
+/**
+ * Commander.jsを使用したCLIプログラムの設定
+ */
 const program = new Command();
 
 program
@@ -79,24 +287,9 @@ program
         jobs?: number;
       }
     ) => {
-      const cliArgs: CliArgs = {
-        input,
-        output: options.output,
-        quality: options.quality,
-        bitrate: options.bitrate,
-        'sample-rate': options['sample-rate'],
-        channels: options.channels,
-        recursive: options.recursive,
-        'output-dir': options['output-dir'],
-        jobs: options.jobs ?? 10,
-      };
-
       const runConversion = Effect.gen(function* () {
         // 引数の検証
-        const validatedArgs = yield* Effect.try({
-          try: () => CliArgsSchema.parse(cliArgs),
-          catch: (error) => new Error(`引数の検証に失敗しました: ${error}`),
-        });
+        const validatedArgs = yield* validateAndParseArgs(input, options);
 
         // ファイルまたはディレクトリの処理
         const inputPath = path.resolve(validatedArgs.input);
@@ -107,129 +300,10 @@ program
 
         if (stat.isFile()) {
           // 単一ファイルの変換
-          const conversionOptions = {
-            inputFile: inputPath,
-            outputFile: validatedArgs.output,
-            quality: validatedArgs.quality,
-            bitrate: validatedArgs.bitrate,
-            sampleRate: validatedArgs['sample-rate'],
-            channels: validatedArgs.channels,
-          };
-
-          yield* convertM4aToMp3(conversionOptions);
+          yield* processSingleFile(inputPath, validatedArgs);
         } else if (stat.isDirectory()) {
           // ディレクトリの処理
-          const m4aFiles = yield* findM4aFiles(inputPath, validatedArgs.recursive || false);
-
-          if (m4aFiles.length === 0) {
-            const searchType = validatedArgs.recursive ? '再帰的に' : '';
-            console.log(chalk.yellow(`⚠️  ${searchType}m4aファイルが見つかりませんでした。`));
-            return;
-          }
-
-          const searchType = validatedArgs.recursive ? '再帰的に' : '';
-          console.log(
-            chalk.green(`✅ ${searchType}${m4aFiles.length}個のm4aファイルが見つかりました。`)
-          );
-
-          // 出力ディレクトリの設定と作成
-          const outputDir = validatedArgs['output-dir'] || inputPath;
-          if (validatedArgs['output-dir']) {
-            yield* ensureOutputDir(outputDir);
-            console.log(chalk.blue(`📁 出力ディレクトリ: ${outputDir}`));
-          }
-
-          // 進捗管理用の変数
-          let completedCount = 0;
-          const totalFiles = m4aFiles.length;
-
-          // 全体進捗の表示関数
-          const updateProgress = () => {
-            const progress = Math.round((completedCount / totalFiles) * 100);
-            const progressBar =
-              '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
-            process.stdout.write(
-              `\r${chalk.cyan(`📊 全体進捗: ${progressBar} ${progress}% (${completedCount}/${totalFiles})`)}`
-            );
-          };
-
-          // 出力ディレクトリ構造の事前作成
-          if (validatedArgs['output-dir']) {
-            const subdirs = new Set<string>();
-            for (const inputFilePath of m4aFiles) {
-              const relativePath = path.relative(inputPath, inputFilePath);
-              const relativeDir = path.dirname(relativePath);
-              if (relativeDir !== '.') {
-                subdirs.add(path.join(outputDir, relativeDir));
-              }
-            }
-
-            // 必要なサブディレクトリを作成
-            for (const subdir of subdirs) {
-              yield* ensureOutputDir(subdir);
-            }
-          }
-
-          // 並列処理用の変換タスクを作成
-          const conversionTasks = m4aFiles.map((inputFilePath) => {
-            // 出力ファイルパスの生成
-            let outputFilePath: string;
-            if (validatedArgs['output-dir']) {
-              // 出力ディレクトリが指定されている場合、相対パス構造を保持
-              const relativePath = path.relative(inputPath, inputFilePath);
-              const relativeDir = path.dirname(relativePath);
-              const fileName = `${path.basename(inputFilePath, path.extname(inputFilePath))}.mp3`;
-
-              if (relativeDir === '.') {
-                outputFilePath = path.join(outputDir, fileName);
-              } else {
-                const outputSubDir = path.join(outputDir, relativeDir);
-                outputFilePath = path.join(outputSubDir, fileName);
-              }
-            } else {
-              // 出力ディレクトリが指定されていない場合、元の場所に出力
-              const outputFileName = `${path.basename(inputFilePath, path.extname(inputFilePath))}.mp3`;
-              outputFilePath = path.join(path.dirname(inputFilePath), outputFileName);
-            }
-
-            const conversionOptions = {
-              inputFile: inputFilePath,
-              outputFile: outputFilePath,
-              quality: validatedArgs.quality,
-              bitrate: validatedArgs.bitrate,
-              sampleRate: validatedArgs['sample-rate'],
-              channels: validatedArgs.channels,
-            };
-
-            return Effect.gen(function* () {
-              // 変換開始の簡潔な表示（相対パスで表示）
-              const displayPath = path.relative(process.cwd(), inputFilePath);
-              console.log(chalk.blue(`🔄 開始: ${chalk.bold(displayPath)}`));
-
-              yield* convertM4aToMp3(conversionOptions);
-
-              // 変換完了時の進捗更新
-              completedCount++;
-              console.log(chalk.green(`✅ 完了: ${chalk.bold(displayPath)}`));
-              updateProgress();
-            });
-          });
-
-          // 全ての変換を並列実行
-          const concurrency = validatedArgs.jobs || 10;
-          const processingMode = validatedArgs.recursive ? '再帰的' : '通常';
-          console.log(
-            chalk.cyan(
-              `\n🚀 ${processingMode}並列変換を開始します... ${chalk.bold(`(並列数: ${concurrency})`)}`
-            )
-          );
-          console.log(); // 空行を追加
-
-          yield* Effect.all(conversionTasks, { concurrency });
-
-          // 最終的な完了メッセージ
-          console.log(); // 進捗バーの後に改行
-          console.log(chalk.green.bold('\n🎉 全ての変換が完了しました！'));
+          yield* processDirectory(inputPath, validatedArgs);
         }
       });
 
@@ -247,7 +321,9 @@ program
     }
   );
 
-// 引数の解析を手動で行う
+/**
+ * コマンドライン引数の解析とヘルプ表示の処理
+ */
 const args = process.argv.slice(2);
 if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
   program.help();

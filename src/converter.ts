@@ -4,7 +4,14 @@ import { Effect } from 'effect';
 import ffmpeg from 'fluent-ffmpeg';
 import { type ConversionOptions, ConversionOptionsSchema } from './schemas.js';
 
+/**
+ * ファイル変換処理中に発生したエラーを表すクラス
+ */
 export class ConversionError extends Error {
+  /**
+   * @param message - エラーメッセージ
+   * @param cause - 原因となったエラー（オプション）
+   */
   constructor(
     message: string,
     public readonly cause?: unknown
@@ -14,20 +21,37 @@ export class ConversionError extends Error {
   }
 }
 
+/**
+ * ファイルが見つからない場合のエラーを表すクラス
+ */
 export class FileNotFoundError extends Error {
+  /**
+   * @param filePath - 見つからなかったファイルのパス
+   */
   constructor(filePath: string) {
     super(`ファイルが見つかりません: ${filePath}`);
     this.name = 'FileNotFoundError';
   }
 }
 
+/**
+ * 無効なファイル形式の場合のエラーを表すクラス
+ */
 export class InvalidFileFormatError extends Error {
+  /**
+   * @param filePath - 無効なファイル形式のファイルパス
+   */
   constructor(filePath: string) {
     super(`無効なファイル形式です: ${filePath}`);
     this.name = 'InvalidFileFormatError';
   }
 }
 
+/**
+ * 入力ファイルの存在確認と形式検証を行う
+ * @param filePath - 検証するファイルのパス
+ * @returns 検証済みのファイルパスを含むEffect
+ */
 const validateInputFile = (
   filePath: string
 ): Effect.Effect<string, FileNotFoundError | InvalidFileFormatError, never> =>
@@ -47,6 +71,12 @@ const validateInputFile = (
     return filePath;
   });
 
+/**
+ * 入力ファイルパスから出力ファイルパスを生成する
+ * @param inputPath - 入力ファイルのパス
+ * @param outputPath - 指定された出力パス（オプション）
+ * @returns 生成された出力ファイルパス
+ */
 const generateOutputPath = (inputPath: string, outputPath?: string): string => {
   if (outputPath) {
     return outputPath;
@@ -57,6 +87,11 @@ const generateOutputPath = (inputPath: string, outputPath?: string): string => {
   return path.join(dir, `${name}.mp3`);
 };
 
+/**
+ * FFmpegを使用してM4AファイルをMP3に変換する
+ * @param options - 変換オプション
+ * @returns 変換処理を含むEffect
+ */
 const convertFile = (
   options: ConversionOptions
 ): Effect.Effect<void, ConversionError | FileNotFoundError | InvalidFileFormatError, never> =>
@@ -104,6 +139,12 @@ const convertFile = (
     });
   });
 
+/**
+ * M4AファイルをMP3に変換するメイン関数
+ * オプションの検証とファイル変換を実行する
+ * @param rawOptions - 変換オプション（検証前）
+ * @returns 変換処理を含むEffect
+ */
 export const convertM4aToMp3 = (
   rawOptions: unknown
 ): Effect.Effect<void, ConversionError | FileNotFoundError | InvalidFileFormatError, never> =>
