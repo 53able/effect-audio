@@ -25,8 +25,13 @@
     "mp3",
     "cli"
   ],
-  "author": "",
+  "author": "53able",
   "license": "MIT",
+  "homepage": "https://github.com/53able/effect-audio#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/53able/effect-audio.git"
+  },
   "dependencies": {
     "chalk": "^5.6.2",
     "commander": "^12.0.0",
