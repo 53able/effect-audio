@@ -18,7 +18,9 @@ export const ConversionOptionsSchema = z.object({
  * コマンドライン引数の検証と型安全性を提供
  */
 export const CliArgsSchema = z.object({
-  input: z.string().min(1, '入力ファイルは必須です'),
+  inputs: z
+    .array(z.string().min(1, '入力ファイルは必須です'))
+    .min(1, '少なくとも1つの入力ファイルが必要です'),
   output: z.string().optional(),
   quality: z.coerce.number().min(0).max(9).optional(),
   bitrate: z.coerce.number().min(32).max(320).optional(),
