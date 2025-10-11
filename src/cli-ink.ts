@@ -104,7 +104,7 @@ const processMultipleInputsWithInk = (
     }
 
     // ヘルプオプションが含まれている場合は何もしない
-    if (inputPaths.some(path => path.startsWith('--'))) {
+    if (inputPaths.some((path) => path.startsWith('--'))) {
       return;
     }
 
@@ -139,7 +139,7 @@ const processMultipleInputsWithInk = (
     }
 
     // ファイルリストを初期化
-    const initialFiles = allM4aFiles.map(filePath => ({
+    const initialFiles = allM4aFiles.map((filePath) => ({
       path: path.relative(process.cwd(), filePath),
       status: 'pending' as const,
     }));
@@ -177,7 +177,7 @@ const processMultipleInputsWithInk = (
 
       return Effect.gen(function* () {
         const displayPath = path.relative(process.cwd(), inputFilePath);
-        
+
         // ファイル処理開始を通知
         if (global.updateFileStatus) {
           global.updateFileStatus(displayPath, 'processing', undefined);
@@ -185,7 +185,7 @@ const processMultipleInputsWithInk = (
 
         try {
           yield* convertM4aToMp3(conversionOptions);
-          
+
           // ファイル処理完了を通知
           if (global.updateFileStatus) {
             global.updateFileStatus(displayPath, 'completed', undefined);
@@ -193,7 +193,11 @@ const processMultipleInputsWithInk = (
         } catch (error) {
           // ファイル処理エラーを通知
           if (global.updateFileStatus) {
-            global.updateFileStatus(displayPath, 'error', error instanceof Error ? error.message : 'Unknown error');
+            global.updateFileStatus(
+              displayPath,
+              'error',
+              error instanceof Error ? error.message : 'Unknown error'
+            );
           }
           throw error;
         }
@@ -202,10 +206,10 @@ const processMultipleInputsWithInk = (
 
     // 全ての変換を並列実行
     const concurrency = validatedArgs.jobs || 10;
-    
+
     try {
       yield* Effect.all(conversionTasks, { concurrency });
-      
+
       // 全ての変換が完了したら少し待ってから終了
       yield* Effect.sleep('2 seconds');
     } catch (error) {

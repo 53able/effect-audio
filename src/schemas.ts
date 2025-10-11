@@ -79,12 +79,9 @@ export const ConversionAppPropsSchema = z.object({
 /**
  * グローバル更新関数のZodスキーマ
  */
-export const GlobalUpdateFileStatusSchema = z.function()
-  .args(
-    z.string(),
-    z.enum(['pending', 'processing', 'completed', 'error']),
-    z.string().optional()
-  )
+export const GlobalUpdateFileStatusSchema = z
+  .function()
+  .args(z.string(), z.enum(['pending', 'processing', 'completed', 'error']), z.string().optional())
   .returns(z.void());
 
 /**

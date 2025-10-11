@@ -1,10 +1,10 @@
-import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
 import { Box, Text } from 'ink';
-import { ProgressBar } from './ProgressBar.js';
-import { FileList } from './FileList.js';
-import { Spinner } from './Spinner.js';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ConversionAppProps, FileItem } from '../schemas.js';
+import { FileList } from './FileList.js';
+import { ProgressBar } from './ProgressBar.js';
+import { Spinner } from './Spinner.js';
 
 export const ConversionApp: React.FC<ConversionAppProps> = ({
   totalFiles,
@@ -24,22 +24,21 @@ export const ConversionApp: React.FC<ConversionAppProps> = ({
   }, [initialFiles]);
 
   // ファイル更新のハンドラー
-  const updateFileStatus = useCallback((filePath: string, status: FileItem['status'], error?: string) => {
-    setFiles(prevFiles => 
-      prevFiles.map(file => 
-        file.path === filePath 
-          ? { ...file, status, error }
-          : file
-      )
-    );
-    
-    if (status === 'processing') {
-      setCurrentFile(filePath);
-    } else if (status === 'completed' || status === 'error') {
-      setCurrentFile('');
-      setCompletedCount(prev => prev + 1);
-    }
-  }, []);
+  const updateFileStatus = useCallback(
+    (filePath: string, status: FileItem['status'], error?: string) => {
+      setFiles((prevFiles) =>
+        prevFiles.map((file) => (file.path === filePath ? { ...file, status, error } : file))
+      );
+
+      if (status === 'processing') {
+        setCurrentFile(filePath);
+      } else if (status === 'completed' || status === 'error') {
+        setCurrentFile('');
+        setCompletedCount((prev) => prev + 1);
+      }
+    },
+    []
+  );
 
   // グローバルな更新関数を設定（Node.js環境用）
   useEffect(() => {
@@ -62,9 +61,7 @@ export const ConversionApp: React.FC<ConversionAppProps> = ({
         <Text color="green" bold>
           🎉 全ての変換が完了しました！
         </Text>
-        <Text color="cyan">
-          処理したファイル数: {totalFiles}
-        </Text>
+        <Text color="cyan">処理したファイル数: {totalFiles}</Text>
       </Box>
     );
   }
@@ -76,16 +73,16 @@ export const ConversionApp: React.FC<ConversionAppProps> = ({
           ✅ {totalFiles}個のm4aファイルが見つかりました
         </Text>
       </Box>
-      
+
       <ProgressBar
         progress={progress}
         total={totalFiles}
         completed={completedCount}
         currentFile={currentFile}
       />
-      
+
       <FileList files={files} />
-      
+
       {totalFiles === 0 && (
         <Box marginY={2}>
           <Spinner message="ファイルを検索中..." />

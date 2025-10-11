@@ -1,6 +1,6 @@
-import type React from 'react';
 import { Box, Text } from 'ink';
-import type { FileListProps, FileItem } from '../schemas.js';
+import type React from 'react';
+import type { FileItem, FileListProps } from '../schemas.js';
 
 export const FileList: React.FC<FileListProps> = ({ files }) => {
   const getStatusIcon = (status: FileItem['status']) => {
@@ -45,9 +45,7 @@ export const FileList: React.FC<FileListProps> = ({ files }) => {
           </Text>
           {file.error && (
             <Box marginLeft={2}>
-              <Text color="red">
-                ({file.error})
-              </Text>
+              <Text color="red">({file.error})</Text>
             </Box>
           )}
         </Box>
