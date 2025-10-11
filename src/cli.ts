@@ -1,5 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { Effect } from 'effect';
@@ -227,10 +229,15 @@ const processMultipleInputs = (
  */
 const program = new Command();
 
+// package.jsonからバージョンを読み込み
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJson = JSON.parse(readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+
 program
   .name('effect-audio')
   .description('High-performance M4A to MP3 converter built with Effect and TypeScript')
-  .version('1.0.8');
+  .version(packageJson.version);
 
 program
   .argument('<inputs...>', '変換するm4aファイルまたはディレクトリのパス（複数指定可能）')
