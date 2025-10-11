@@ -1,11 +1,3 @@
-import { program } from "commander";
-import { concatFiles } from "./concatenate";
+#!/usr/bin/env node
 
-program
-  .action(concatFiles)
-  .name("concatenate")
-  .description("Concatenate files in a directory")
-  .requiredOption("-d, --dir <dir>", "a directory")
-  .option("-t, --type <type>", "a file type", undefined);
-
-program.parse();
+import './cli.js';

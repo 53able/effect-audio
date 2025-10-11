@@ -1,22 +1,49 @@
 {
-  "name": "tools",
-  "module": "index.ts",
+  "name": "effect-audio",
+  "version": "1.0.0",
+  "description": "High-performance M4A to MP3 converter built with Effect and TypeScript",
+  "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "effect-audio": "./dist/index.js"
+  },
   "scripts": {
-    "exec": "bun src/index.ts",
-    "format": "biome format --write **/*.ts"
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "biome check --write ."
+  },
+  "keywords": [
+    "audio",
+    "converter",
+    "effect",
+    "typescript",
+    "functional-programming",
+    "m4a",
+    "mp3",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^12.0.0",
+    "effect": "^3.0.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "tsx": "^4.7.0",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.7.3",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@biomejs/biome": "^1.4.0",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "change-case": "^5.4.3",
-    "commander": "^12.0.0",
-    "gpt-tokenizer": "^2.1.2",
-    "minimatch": "^9.0.3"
-  }
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.14.0"
 }
