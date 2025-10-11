@@ -1,8 +1,9 @@
 name: Publish to npm
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   publish:
@@ -40,12 +41,58 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Previous tag: $PREVIOUS_TAG"
+            echo "Current tag: ${{ github.ref_name }}"
+            
+            # Generate changelog between tags
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD)
+            
+            # Create release notes
+            cat << EOF > release_notes.md
+          ## Changes in ${{ github.ref_name }}
+          
+          ### Commits since $PREVIOUS_TAG
+          $CHANGELOG
+          
+          ### Installation
+          \`\`\`bash
+          npm install effect-audio@${{ github.ref_name }}
+          \`\`\`
+          EOF
+          else
+            echo "No previous tag found, creating initial release notes"
+            cat << EOF > release_notes.md
+          ## Initial Release ${{ github.ref_name }}
+          
+          ### Installation
+          \`\`\`bash
+          npm install effect-audio@${{ github.ref_name }}
+          \`\`\`
+          EOF
+          fi
+          
+          # Output the release notes
+          cat release_notes.md
+          
+          # Set output for next step
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: ${{ steps.release_notes.outputs.release_notes }}
           draft: false
           prerelease: false
