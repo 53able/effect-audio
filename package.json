@@ -1,6 +1,6 @@
 {
   "name": "effect-audio",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "High-performance M4A to MP3 converter built with Effect and TypeScript",
   "main": "dist/index.js",
   "type": "module",
@@ -50,7 +50,6 @@
   },
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
-  "packageManager": "pnpm@10.14.0"
+    "pnpm": ">=10.14.0"
+  }
 }
