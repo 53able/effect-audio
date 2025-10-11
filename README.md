@@ -94,28 +94,18 @@ effect-audio /path/to/music --recursive --jobs 20 --output-dir /path/to/converte
 - `pnpm run build`: TypeScriptをビルド
 - `pnpm run start`: ビルド済みファイルを実行
 - `pnpm run lint`: リンターを実行
-- `pnpm run format`: フォーマッターを実行
-- `pnpm run check`: リンターとフォーマッターを実行
+- `pnpm run format`: フォーマッターを実行（自動修正）
+- `pnpm run check`: リンターとフォーマッターを実行（自動修正）
 - `pnpm run publish:npm`: npmにパッケージを公開
 
 ### リリース
 
-このプロジェクトはGitHub Actionsを使用して自動的にnpmに公開されます：
+```bash
+pnpm version patch  # または minor, major
+git push origin main --tags
+```
 
-1. バージョンを更新：
-   ```bash
-   pnpm version patch  # または minor, major
-   ```
-
-2. 変更をプッシュ：
-   ```bash
-   git push origin main --tags
-   ```
-
-3. タグがプッシュされると、自動的に以下が実行されます：
-   - npmへのパッケージ公開
-   - GitHub Releaseの自動作成
-   - リリースノートの自動生成
+タグプッシュで自動的にnpm公開とGitHub Releaseが作成されます。
 
 ### 技術スタック
 
