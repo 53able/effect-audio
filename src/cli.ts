@@ -230,7 +230,7 @@ const program = new Command();
 program
   .name('effect-audio')
   .description('High-performance M4A to MP3 converter built with Effect and TypeScript')
-  .version('1.0.0');
+  .version('1.0.8');
 
 program
   .argument('<inputs...>', '変換するm4aファイルまたはディレクトリのパス（複数指定可能）')

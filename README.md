@@ -4,7 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/effect-audio.svg)](https://www.npmjs.com/package/effect-audio)
 [![npm downloads](https://img.shields.io/npm/dm/effect-audio.svg)](https://www.npmjs.com/package/effect-audio)
 [![Node.js](https://img.shields.io/badge/Node.js-18.0.0+-green.svg)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-8.0.0+-blue.svg)](https://pnpm.io/)
+[![pnpm](https://img.shields.io/badge/pnpm-10.14.0+-blue.svg)](https://pnpm.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Effect](https://img.shields.io/badge/Effect-3.0+-purple.svg)](https://effect.website/)
 
@@ -112,7 +112,10 @@ effect-audio /path/to/music --recursive --jobs 20 --output-dir /path/to/converte
    git push origin main --tags
    ```
 
-3. GitHubでReleaseを作成すると、自動的にnpmに公開されます
+3. タグがプッシュされると、自動的に以下が実行されます：
+   - npmへのパッケージ公開
+   - GitHub Releaseの自動作成
+   - リリースノートの自動生成
 
 ### 技術スタック
 
@@ -121,7 +124,7 @@ effect-audio /path/to/music --recursive --jobs 20 --output-dir /path/to/converte
 ## 要件
 
 - Node.js 18.0.0以上
-- pnpm 8.0.0以上
+- pnpm 10.14.0以上
 - FFmpeg（音声変換に必要）
 
 ## ライセンス
