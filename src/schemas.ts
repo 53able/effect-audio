@@ -32,13 +32,76 @@ export const CliArgsSchema = z.object({
 });
 
 /**
- * ファイル変換オプションの型定義
- * ConversionOptionsSchemaから推論される型
+ * ファイルアイテムのZodスキーマ
+ * UIで使用するファイル状態を定義
  */
-export type ConversionOptions = z.infer<typeof ConversionOptionsSchema>;
+export const FileItemSchema = z.object({
+  path: z.string().min(1, 'ファイルパスは必須です'),
+  status: z.enum(['pending', 'processing', 'completed', 'error']),
+  error: z.string().optional(),
+});
 
 /**
- * CLI引数の型定義
- * CliArgsSchemaから推論される型
+ * プログレスバーのZodスキーマ
  */
+export const ProgressBarPropsSchema = z.object({
+  progress: z.number().min(0).max(100),
+  total: z.number().min(0),
+  completed: z.number().min(0),
+  currentFile: z.string().optional(),
+});
+
+/**
+ * スピナーのZodスキーマ
+ */
+export const SpinnerPropsSchema = z.object({
+  message: z.string().optional(),
+});
+
+/**
+ * ファイルリストのZodスキーマ
+ */
+export const FileListPropsSchema = z.object({
+  files: z.array(FileItemSchema),
+});
+
+/**
+ * 変換アプリのZodスキーマ
+ */
+export const ConversionAppPropsSchema = z.object({
+  totalFiles: z.number().min(0),
+  files: z.array(FileItemSchema),
+  onComplete: z.function().returns(z.void()),
+  onFileUpdate: z.function().optional(),
+  onProgressUpdate: z.function().optional(),
+});
+
+/**
+ * グローバル更新関数のZodスキーマ
+ */
+export const GlobalUpdateFileStatusSchema = z.function()
+  .args(
+    z.string(),
+    z.enum(['pending', 'processing', 'completed', 'error']),
+    z.string().optional()
+  )
+  .returns(z.void());
+
+/**
+ * グローバルオブジェクトの拡張型定義
+ */
+declare global {
+  var updateFileStatus: GlobalUpdateFileStatus | undefined;
+}
+
+/**
+ * 型定義（Zodスキーマから推論）
+ */
+export type ConversionOptions = z.infer<typeof ConversionOptionsSchema>;
 export type CliArgs = z.infer<typeof CliArgsSchema>;
+export type FileItem = z.infer<typeof FileItemSchema>;
+export type ProgressBarProps = z.infer<typeof ProgressBarPropsSchema>;
+export type SpinnerProps = z.infer<typeof SpinnerPropsSchema>;
+export type FileListProps = z.infer<typeof FileListPropsSchema>;
+export type ConversionAppProps = z.infer<typeof ConversionAppPropsSchema>;
+export type GlobalUpdateFileStatus = z.infer<typeof GlobalUpdateFileStatusSchema>;
