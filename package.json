@@ -1,6 +1,6 @@
 {
   "name": "effect-audio",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "High-performance M4A to MP3 converter built with Effect and TypeScript",
   "main": "dist/cli-ink.js",
   "type": "module",
